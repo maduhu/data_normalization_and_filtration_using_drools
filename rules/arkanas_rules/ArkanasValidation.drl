@@ -1,0 +1,30 @@
+package rules
+
+import com.treselle.datavalidation.value.Arkanas;
+import com.treselle.datavalidation.util.StringUtil;
+import com.treselle.datavalidation.util.CommonUtil;
+
+rule "remove invalid initial production and first production values" salience 2
+	when
+		$arkanas : Arkanas( $first_prod_date : firstProdDate, $initial_production : initialProcuction )
+		eval( !StringUtil.isValidString($first_prod_date) || !StringUtil.isValidString($initial_production) || "X".equalsIgnoreCase($initial_production) || $initial_production.contains(",") || $initial_production.contains("See Remarks") )
+	then
+	    retract($arkanas);
+end
+
+rule "set initial production to gas_vol and first_prod_date to correct format" salience 1
+	when 
+		$arkanas : Arkanas( $initial_production : initialProcuction,$first_prod_date : firstProdDate,$api_number : apiNumber )
+		eval( CommonUtil.isValidDate($first_prod_date,"EEE MMM dd HH:mm:ss z yyyy") )
+	then
+		try {
+	 		$arkanas.setDateTime(CommonUtil.getDate($first_prod_date,"EEE MMM dd HH:mm:ss z yyyy"));
+	 		$arkanas.setGasVol(Float.parseFloat($initial_production));
+	 		$arkanas.setFilteredData(true);
+	 		$arkanas.setApiNumber($api_number+"0000");
+	 	} catch (Exception e) {
+	 		e.printStackTrace();
+	 	}
+end
+		
+		

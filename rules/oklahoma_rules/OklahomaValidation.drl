@@ -1,0 +1,53 @@
+package rules
+
+import com.treselle.datavalidation.value.Oklahoma;
+import com.treselle.datavalidation.util.CommonUtil;
+import java.util.Date;
+import com.treselle.datavalidation.util.StringUtil;
+
+declare MaxValue
+   apinumber : String
+   max_modify_date : long
+end
+
+declare UniqVal
+	apinumber : String
+	max_modify_date : long
+end
+
+dialect "mvel";
+
+rule "data between given range" 
+	when
+		$oklahoma : Oklahoma( $api_number : apiNumber,$test_date : testDate,$modify_date : modifyDate,$drill_type : drillType)
+		eval( !(CommonUtil.isDateWithinRange(CommonUtil.getDate("2010-01-01","yyyy-MM-dd"),new Date(),$test_date) && StringUtil.isValidString($drill_type) && ( $drill_type.toUpperCase().startsWith("HORIZONTAL") || $drill_type.toUpperCase().equalsIgnoreCase("H") ) )  )
+	then
+		retract($oklahoma);
+end
+
+rule "selecting ok data with max modify date"
+	when
+		$oklahoma : Oklahoma($api_number : getApiNumber()) and not MaxValue($api_number == apinumber)
+		accumulate(ok : Oklahoma(getApiNumber()==$api_number),$maxDateValue : max(ok.getModifyDate().getTime())) 
+	then
+		insert(new MaxValue($api_number,$maxDateValue));
+end
+
+rule "Filters max modify date values"
+	when 
+		$oklahoma : Oklahoma($api_number : getApiNumber(),$max_date : getModifyDate().getTime()) and not UniqVal($api_number == apinumber,$max_date == max_modify_date)
+		 $maxValue : MaxValue($api_number==apinumber && $max_date==max_modify_date)
+		
+	then
+		insert(new UniqVal($api_number,$max_date));
+		$oklahoma.setFilteredData(true);
+end
+
+
+		
+		
+		
+		
+		
+		
+		
